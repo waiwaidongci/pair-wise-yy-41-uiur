@@ -98,6 +98,16 @@ def make_handler(service: Service, static_dir: str):
                     actor, role = self._identity()
                     del actor
                     self._json(200, {"events": service.audit(role)})
+                elif path == "/api/drafts":
+                    actor, role = self._identity()
+                    query = parse_qs(urlparse(self.path).query)
+                    status = query.get("status", [None])[0]
+                    self._json(200, {"drafts": service.list_drafts(role, status)})
+                elif path == "/api/chain/recommendation":
+                    actor, role = self._identity()
+                    query = parse_qs(urlparse(self.path).query)
+                    order_no = query.get("order_no", [None])[0]
+                    self._json(200, service.get_recommendation(order_no, role))
                 else:
                     self._json(404, {"error": "not_found"})
             except Exception as exc:
@@ -119,6 +129,22 @@ def make_handler(service: Service, static_dir: str):
                     expected = body.get("expected_version")
                     self._json(200, service.transition(
                         item_id, target, expected, actor, role))
+                elif path == "/api/chain/alerts":
+                    self._json(201, service.register_alert(body, actor, role))
+                elif path == "/api/chain/verifications":
+                    self._json(201, service.register_verification(body, actor, role))
+                elif path == "/api/chain/notices":
+                    self._json(201, service.register_notice(body, actor, role))
+                elif path == "/api/chain/monitoring":
+                    self._json(200, service.update_monitoring(body, actor, role))
+                elif path == "/api/drafts":
+                    self._json(201, service.save_draft(body, actor, role))
+                elif path == "/api/drafts/merge":
+                    self._json(200, service.merge_drafts(actor, role))
+                elif path == "/api/drafts/resolve":
+                    self._json(200, service.resolve_pending(body, actor, role))
+                elif path == "/api/notices/expire":
+                    self._json(200, service.check_expired_notices(actor, role))
                 else:
                     self._json(404, {"error": "not_found"})
             except Exception as exc:
